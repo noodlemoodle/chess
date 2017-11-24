@@ -36,11 +36,9 @@ void main(void) {
           color = texture(tex, textureCoords.xy).xyz;
      }
 
-
      vec3 diffuse_color = Kd;
      vec3 specular_color = Ks;
      float specular_power = Ns;
-
 
      // normalize eye and normal vectors
      vec4 v = fragPosition;
@@ -50,8 +48,6 @@ void main(void) {
 
      float diffuse_intensity = clamp(max(dot(n, l.xyz), 0), 0.0, 1.0);
 
-     //vec3 half_angle = (1/2)*(l.xyz + eye);
-     //vec3 R = reflect(-l.xyz, n);
      vec3 half_angle = normalize(l.xyz + eye);
 
      float specular_weight = clamp(dot(half_angle, n), 0.0, 1.0);
@@ -61,11 +57,8 @@ void main(void) {
      vec3 d = (diffuse_intensity * diffuse_color);
      vec3 s = specular_color * pow(specular_weight, specular_power);
 
-//     lite = a + (color.x*d.x + color.y*d.y + color.z*d.z) + (color.x*s.x + color.y*s.y + color.z*s.z);
-
      lite = a + d + s;
      vec3 colour = clamp(vec3(color.x*lite.x, color.y*lite.y, color.z*lite.z), 0.0, 1.0);
-
 
      FragmentColour = vec4(colour, 1.0);
 

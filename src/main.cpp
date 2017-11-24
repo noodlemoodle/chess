@@ -1,4 +1,4 @@
-// cpsc 453 assignment 3 qiyue zhang 10131658
+// cpsc 453 assignment 3 bonus qiyue zhang 10131658
 
 #include <iostream>
 #include <fstream>
@@ -24,15 +24,16 @@ using namespace std;
 
 OBJmodel om;
 
+// window controls
+bool closeWindow = false;
 int windowWidth, windowHeight;
 
+// perspective viewing controls
 float lookAtX = 0.0, lookAtY = 0.0, lookAtZ = 0.0;
 float camX = 0.0, camY = 5.0, camZ = 5.0;
 float zoom = 90.0;
 float up = 1.0;
 bool upsideDown = false;
-
-bool closeWindow = false;
 
 // world coordinates
 float worldX = 0, worldY = 0, worldZ = 0;
@@ -41,30 +42,20 @@ float yawAngle = 0, rollAngle = 0, pitchAngle = 0;
 
 // texture mapping controls
 int ao = 1, color = 1;
-//
-// //donut materials
-// float Ns = 96.078431;
-// vector<float> Ka = {0.8, 0.8, 0.8};
-// vector<float> Kd = {0.64, 0.64, 0.64};
-// vector<float> Ks = {0.5, 0.5, 0.5};
-// vector<float> Ke = {0.0, 0.0, 0.0};
-// float Ni = 1.0;
-// float d = 1.0;
-// float illum = 2.0;
 
+// light position
 glm::vec3 lightPos = glm::vec3(0, 0, 0);
 
-bool CheckGLErrors();
-
+// read materials file, return a float vector
 vector<float> readMTL(string f) {
 	if(f.empty()) {
 		cerr << "ERROR: blank filename" << endl;
 		exit(0);
 	}
-	// try to open the file
+
 	ifstream file;
 	file.open( f, fstream::in );
-	// didn't work? fail!
+
 	if ( file.fail() ) {
 		cerr << "ERROR: OBJmodel: Couldn't load \"" << f << "\"." << endl;
 		exit(0);
@@ -283,6 +274,7 @@ struct Texture {
 
 };
 
+// helper function for finding the translations to center an object
 vector<float> findBound(vector<float> v) {
 	float tempMaxX = 0;
 	float tempMinX = 0;
@@ -325,7 +317,7 @@ public:
 	string colorPng;
 	string aoPng;
 	string mtlFile;
-	float x = 0, y = 0, z = 0; //world coordinates
+	float x = 0, y = 0, z = 0; //world coordinates of object
 	vector<float> objVertices;
 	vector<float> objTex;
 	vector<float> objNorms;
@@ -336,6 +328,7 @@ public:
 	unsigned char* aoPixels;
 	glm::mat4 modelMatrix = glm::mat4(1.0f);
 
+	// constructor
 	Obj(string obj, string color, string ao, string mtl) {
 		objFile = obj;
 		colorPng = color;
@@ -343,6 +336,7 @@ public:
 		mtlFile = mtl;
 	}
 
+	// load obj file
 	bool init() {
 		if(!om.load(objFile)) {
 			cout<<"failed"<<endl;
@@ -372,6 +366,7 @@ public:
 		}
 	}
 
+	// bind ao and color textures
 	void bindTextures(GLuint pid) {
 
 		glGenTextures(1, &colorTex.id);
@@ -410,6 +405,7 @@ public:
 		glUniform1i(aoLoc, 1);
 	}
 
+	// bind object materials
 	void bindMaterials(GLuint pid) {
 		materials = readMTL(mtlFile);
 		GLint nsLoc = glGetUniformLocation(pid, "Ns");
@@ -438,6 +434,7 @@ public:
 
 	}
 
+	// move object to center of world coords
 	glm::mat4 toCenter(float rollAngle = 0, float pitchAngle = 0, float yawAngle = 0) {
 		vector<float> v = findBound(objVertices);
 		float cx = v[6], cy = v[7], cz = v[8];
@@ -454,6 +451,7 @@ public:
 		return Transform;
 	}
 
+	// set object world coords
 	void setCoords(float worldX, float worldY, float worldZ, float scale = 1, float yawAngle = 0, float rollAngle = 0, float pitchAngle = 0) {
 		glm::mat4 Scale = glm::scale(glm::mat4(1.0f), glm::vec3(scale, scale, scale));
 		glm::mat4 Translate = glm::translate(glm::mat4(1.0f), glm::vec3(worldX, worldY, worldZ));
@@ -464,6 +462,7 @@ public:
 		modelMatrix = Scale*RotateZ*RotateY*RotateX*Translate;
 	}
 
+	// getter for object model matrix
 	glm::mat4 getModelMatrix() {
 		return modelMatrix;
 	}
@@ -471,6 +470,7 @@ public:
 
 vector<Obj> chessPieces;
 
+// get transformation matrix to be applied to all objects in world
 glm::mat4 getWorldMatrix() {
 	glm::mat4 Scale = glm::scale(glm::mat4(1.0f), glm::vec3(scale, scale, scale));
 	glm::mat4 Translate = glm::translate(glm::mat4(1.0f), glm::vec3(worldX, worldY, worldZ));
@@ -481,15 +481,18 @@ glm::mat4 getWorldMatrix() {
 	return Scale*RotateZ*RotateY*RotateX*Translate;
 }
 
+// get view matrix
 glm::mat4 getV() {
 	up = upsideDown? -1.0 : 1.0;
 	return glm::lookAt(glm::vec3(camX, camY, camZ), glm::vec3(lookAtX, lookAtY, lookAtZ), glm::vec3(0.0, up, 0.0));
 }
 
+// get projection matrix
 glm::mat4 getP() {
 	return glm::perspective(glm::radians(zoom), (float)windowWidth/(float)windowHeight, 0.1f, 100.0f);
 }
 
+// bind matrices for an object o
 void initMatrices(GLuint pid, Obj o) {
 
 	glm::mat4 T = o.toCenter();
@@ -512,6 +515,7 @@ void initMatrices(GLuint pid, Obj o) {
 	glUniformMatrix4fv(pLoc, 1, GL_FALSE, &P[0][0]);
 }
 
+// render object o
 void render(GLuint pid, VertexArray va, Obj o) {
 	glBindVertexArray(va.id);
 	glActiveTexture(GL_TEXTURE0);
@@ -525,6 +529,7 @@ void render(GLuint pid, VertexArray va, Obj o) {
 
 }
 
+// display objects in window
 void display(GLuint pid) {
 
 	glClearColor(0.0f, 0.0f, 0.2f, 1.0f);
@@ -548,6 +553,7 @@ void display(GLuint pid) {
 	}
 }
 
+// key callback
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods) {
 
 	// close window
@@ -667,32 +673,6 @@ int main(int argc, const char** argv) {
 	Program p("data/vertex.glsl", "data/fragment.glsl");
 	glUseProgram(p.id);
 
-	// GLint nsLoc = glGetUniformLocation(p.id, "Ns");
-	// glUniform1f(nsLoc, Ns);
-	//
-	// GLint kaLoc = glGetUniformLocation(p.id, "Ka");
-	// glUniform3f(kaLoc, Ka[0], Ka[1], Ka[2]);
-	//
-	// GLint kdLoc = glGetUniformLocation(p.id, "Kd");
-	// glUniform3f(kdLoc, Kd[0], Kd[1], Kd[2]);
-	//
-	// GLint ksLoc = glGetUniformLocation(p.id, "Ks");
-	// glUniform3f(ksLoc, Ks[0], Ks[1], Ks[2]);
-	//
-	// GLint keLoc = glGetUniformLocation(p.id, "Ke");
-	// glUniform3f(keLoc, Ke[0], Ke[1], Ke[2]);
-	//
-	// GLint niLoc = glGetUniformLocation(p.id, "Ni");
-	// glUniform1f(niLoc, Ni);
-	//
-	// GLint dLoc = glGetUniformLocation(p.id, "d");
-	// glUniform1f(dLoc, d);
-	//
-	// GLint illumLoc = glGetUniformLocation(p.id, "illum");
-	// glUniform1f(illumLoc, illum);
-
-//	readMTL("bishop.mtl");
-
 	Obj board("board.obj", "boardColor.png", "boardAo.png", "board.mtl");
 	board.setCoords(0, 0, 0, 8);
 	chessPieces.push_back(board);
@@ -771,27 +751,4 @@ int main(int argc, const char** argv) {
 	cout << "bui bui" << endl;
 	return 0;
 
-}
-
-bool CheckGLErrors() {
-	bool error = false;
-	for (GLenum flag = glGetError(); flag != GL_NO_ERROR; flag = glGetError()) {
-		cout << "OpenGL ERROR:  ";
-		switch (flag) {
-			case GL_INVALID_ENUM:
-			cout << "GL_INVALID_ENUM" << endl; break;
-			case GL_INVALID_VALUE:
-			cout << "GL_INVALID_VALUE" << endl; break;
-			case GL_INVALID_OPERATION:
-			cout << "GL_INVALID_OPERATION" << endl; break;
-			case GL_INVALID_FRAMEBUFFER_OPERATION:
-			cout << "GL_INVALID_FRAMEBUFFER_OPERATION" << endl; break;
-			case GL_OUT_OF_MEMORY:
-			cout << "GL_OUT_OF_MEMORY" << endl; break;
-			default:
-			cout << "[unknown error code]" << endl;
-		}
-		error = true;
-	}
-	return error;
 }

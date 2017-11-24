@@ -12,7 +12,6 @@ uniform mat4 vM;
 uniform mat4 pM;
 uniform vec3 lightPos;
 
-
 out vec4 fragPosition;
 out vec3 fragEye;
 out vec3 fragNormal;
